@@ -1,0 +1,32 @@
+<?php
+
+namespace App\Filament\Resources\Users\Pages;
+
+use App\Enums\Users\UserRole;
+use App\Filament\Resources\Users\UserResource;
+use App\Models\User;
+use Filament\Actions\CreateAction;
+use Filament\Resources\Pages\ManageRecords;
+
+class ManageUsers extends ManageRecords
+{
+    protected static string $resource = UserResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            CreateAction::make()
+                ->label('Add system user')
+                ->using(function (array $data): User {
+                    $user = new User;
+                    $user->fill($data);
+                    $user->forceFill([
+                        'role' => UserRole::SystemAdmin,
+                    ]);
+                    $user->save();
+
+                    return $user;
+                }),
+        ];
+    }
+}

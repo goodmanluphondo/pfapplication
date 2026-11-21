@@ -2,7 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Enums\Users\UserRole;
 use App\Models\User;
+use App\Support\InitialUserPassword;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -15,11 +17,21 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $user = User::query()->updateOrCreate(
+            ['email' => 'luphondog@icloud.com'],
+            [
+                'first_name' => 'Goodman',
+                'last_name' => 'Luphondo',
+                'email_verified_at' => now(),
+                'password' => InitialUserPassword::resolve(
+                    app()->environment(),
+                    config('pixelforge.initial_user_password'),
+                ),
+            ],
+        );
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        $user->forceFill([
+            'role' => UserRole::BasicUser,
+        ])->save();
     }
 }

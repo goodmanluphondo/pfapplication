@@ -1,7 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
+use App\Enums\Users\UserRole;
+use App\Support\InitialUserPassword;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -13,8 +19,10 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('first_name');
+            $table->string('last_name');
             $table->string('email')->unique();
+            $table->string('role')->default(UserRole::BasicUser->value);
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();
@@ -35,6 +43,20 @@ return new class extends Migration
             $table->longText('payload');
             $table->integer('last_activity')->index();
         });
+
+        DB::table('users')->insertOrIgnore([
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+            'email' => 'pfapplication@in-progress.app',
+            'role' => UserRole::SystemAdmin->value,
+            'email_verified_at' => now(),
+            'password' => Hash::make(InitialUserPassword::resolve(
+                app()->environment(),
+                config('pixelforge.initial_user_password'),
+            )),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     /**
