@@ -1,5 +1,7 @@
 <?php
 
+$mailTransport = env('APP_ENV') === 'production' ? 'cloudflare' : env('MAIL_TRANSPORT', 'cloudflare');
+
 return [
 
     /*
@@ -14,7 +16,7 @@ return [
     |
     */
 
-    'default' => env('MAIL_MAILER', 'log'),
+    'default' => env('MAIL_MAILER', 'cloudflare'),
 
     /*
     |--------------------------------------------------------------------------
@@ -47,6 +49,12 @@ return [
             'password' => env('MAIL_PASSWORD'),
             'timeout' => null,
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
+        ],
+
+        'cloudflare' => [
+            'transport' => $mailTransport,
+            'host' => env('MAIL_HOST', '127.0.0.1'),
+            'port' => (int) env('MAIL_PORT', 1025),
         ],
 
         'ses' => [
