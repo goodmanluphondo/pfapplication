@@ -18,10 +18,10 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $user = User::query()->updateOrCreate(
-            ['email' => 'luphondog@icloud.com'],
+            ['email' => 'jane@example.com'],
             [
-                'first_name' => 'Goodman',
-                'last_name' => 'Luphondo',
+                'first_name' => 'Jane',
+                'last_name' => 'Doe',
                 'email_verified_at' => now(),
                 'password' => InitialUserPassword::resolve(
                     app()->environment(),

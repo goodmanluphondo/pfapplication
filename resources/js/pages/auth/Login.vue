@@ -19,9 +19,13 @@ defineOptions({
     },
 });
 
-defineProps<{
+const props = defineProps<{
     status?: string;
     canResetPassword: boolean;
+    demoCredentials: {
+        email: string;
+        password: string | null;
+    };
 }>();
 </script>
 
@@ -44,6 +48,7 @@ defineProps<{
                         id="email"
                         type="email"
                         name="email"
+                        :default-value="props.demoCredentials.email"
                         required
                         v-focus
                         :tabindex="1"
@@ -58,6 +63,7 @@ defineProps<{
                     <PasswordInput
                         id="password"
                         name="password"
+                        :default-value="props.demoCredentials.password ?? undefined"
                         required
                         :tabindex="2"
                         autocomplete="current-password"
