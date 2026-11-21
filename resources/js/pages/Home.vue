@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { ChevronDown, Moon, Sun, User as UserIcon } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { home, login, register } from '@/routes';
 import { submit as submitPromptRoute } from '@/routes/prompt';
 import { useAppearance } from '@/composables/useAppearance';
@@ -12,7 +12,9 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import UserMenuContent from '@/components/UserMenuContent.vue';
+import { usePromptDraftStore } from '@/stores/promptDraft';
 
+const promptDraft = usePromptDraftStore();
 const form = useForm({
     prompt: '',
     size: '1024x1024',
@@ -20,6 +22,17 @@ const form = useForm({
     reference_image_urls: [''],
 });
 const submittedPrompt = ref('');
+
+onMounted(() => {
+    Object.assign(form, promptDraft.restore());
+});
+
+watch(
+    () => form.data(),
+    (draft) => promptDraft.save(draft),
+    { deep: true },
+);
+
 const page = usePage();
 const user = computed(() => page.props.auth.user);
 const { resolvedAppearance, updateAppearance } = useAppearance();
@@ -95,6 +108,8 @@ function submitPrompt(): void {
         preserveScroll: true,
         onSuccess: () => {
             submittedPrompt.value = trimmedPrompt;
+            promptDraft.clear();
+            form.reset();
         },
     });
 }
