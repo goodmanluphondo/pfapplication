@@ -121,3 +121,36 @@ function succeededPixelforgeGeneration(): array
         'completed_at' => '2026-11-21T10:00:20Z',
     ]);
 }
+
+const PRICING_URL = 'pixelforge.promptedit.dev/v1/pricing';
+const GENERATIONS_URL = 'pixelforge.promptedit.dev/v1/generations';
+
+const WEBHOOK_SECRET = 'whsec_test';
+
+function validPrompt(array $overrides = []): array
+{
+    return [
+        'prompt' => 'A lighthouse on a cliff at dawn',
+        'size' => '1024x1024',
+        'quality' => 'medium',
+        'reference_image_urls' => [],
+        ...$overrides,
+    ];
+}
+
+function sendPixelforgeEvent(array $pixelforgeGeneration, ?string $secret = WEBHOOK_SECRET)
+{
+    $payload = json_encode([
+        'id' => 'evt_01JC2Z9B7K2M4P6R8T0V3X5Z7A',
+        'object' => 'event',
+        'type' => 'generation.'.$pixelforgeGeneration['status'],
+        'data' => ['object' => $pixelforgeGeneration],
+    ]);
+    $timestamp = time();
+    $signature = hash_hmac('sha256', "{$timestamp}.{$payload}", (string) $secret);
+
+    return test()->call('POST', route('webhooks.pixelforge'), [], [], [], [
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_PIXELFORGE_SIGNATURE' => "t={$timestamp},v1={$signature}",
+    ], $payload);
+}

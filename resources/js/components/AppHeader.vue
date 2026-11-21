@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import { ChevronDown, Moon, Sun, User as UserIcon } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { home, login, register } from '@/routes';
 import { index as history } from '@/routes/generations';
 import AppLogoLockup from '@/components/AppLogoLockup.vue';
+import BuyCreditsDialog from '@/components/credits/BuyCreditsDialog.vue';
+import { Toaster } from '@/components/ui/sonner';
+import { formatUsd } from '@/lib/generations';
 import { useAppearance } from '@/composables/useAppearance';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -15,6 +18,7 @@ import {
 import UserMenuContent from '@/components/UserMenuContent.vue';
 
 const page = usePage();
+const isBuyCreditsOpen = ref(false);
 const user = computed(() => page.props.auth.user);
 const { resolvedAppearance, updateAppearance } = useAppearance();
 const isDarkMode = computed(() => resolvedAppearance.value === 'dark');
@@ -47,6 +51,21 @@ function toggleAppearance(): void {
             >
                 History
             </Link>
+
+            <button
+                v-if="user && page.props.credits"
+                type="button"
+                class="rounded-full border border-[#dadce0] px-3 py-1.5 text-[13px] font-medium text-[#202124] transition hover:bg-[#f1f3f4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5f6368] dark:border-[#5f6368] dark:text-[#e8eaed] dark:hover:bg-[#3c4043]"
+                :aria-label="`Balance ${formatUsd(page.props.credits.balance_usd)}. Buy credits`"
+                @click="isBuyCreditsOpen = true"
+            >
+                {{ formatUsd(page.props.credits.balance_usd) }}
+                <span
+                    class="ml-1 font-normal text-[#5f6368] dark:text-[#bdc1c6]"
+                >
+                    · Buy credits
+                </span>
+            </button>
 
             <button
                 :aria-label="
@@ -112,4 +131,7 @@ function toggleAppearance(): void {
             </div>
         </div>
     </header>
+
+    <BuyCreditsDialog v-if="user" v-model:open="isBuyCreditsOpen" />
+    <Toaster />
 </template>

@@ -2,6 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Requests\Credits\CreditPurchaseRequest;
+use App\Services\Credits\CreditLedger;
+use App\Services\Pixelforge\Nanodollars;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -40,6 +43,10 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $request->user(),
+            ],
+            'credits' => fn (): ?array => $request->user() === null ? null : [
+                'balance_usd' => Nanodollars::toUsd(app(CreditLedger::class)->balanceFor($request->user())),
+                'pack_dollars' => CreditPurchaseRequest::PACK_DOLLARS,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

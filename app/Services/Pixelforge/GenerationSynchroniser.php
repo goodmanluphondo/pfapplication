@@ -7,6 +7,7 @@ namespace App\Services\Pixelforge;
 use App\Enums\Generations\GenerationStatus;
 use App\Models\Generation;
 use App\Models\User;
+use App\Services\Credits\CreditLedger;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -15,7 +16,10 @@ final class GenerationSynchroniser
 {
     private const int SECONDS_BETWEEN_POLLS = 5;
 
-    public function __construct(private PixelforgeClient $client) {}
+    public function __construct(
+        private PixelforgeClient $client,
+        private CreditLedger $ledger,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $pixelforgeGeneration
@@ -34,6 +38,7 @@ final class GenerationSynchroniser
             }
 
             $generation->save();
+            $this->ledger->settle($generation);
         });
 
         $generation->refresh();

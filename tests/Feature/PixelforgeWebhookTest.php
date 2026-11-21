@@ -3,28 +3,9 @@
 use App\Enums\Generations\GenerationStatus;
 use App\Models\Generation;
 
-const WEBHOOK_SECRET = 'whsec_test';
-
 beforeEach(function () {
     config(['services.pixelforge.webhook_secret' => WEBHOOK_SECRET]);
 });
-
-function sendPixelforgeEvent(array $pixelforgeGeneration, ?string $secret = WEBHOOK_SECRET)
-{
-    $payload = json_encode([
-        'id' => 'evt_01JC2Z9B7K2M4P6R8T0V3X5Z7A',
-        'object' => 'event',
-        'type' => 'generation.'.$pixelforgeGeneration['status'],
-        'data' => ['object' => $pixelforgeGeneration],
-    ]);
-    $timestamp = time();
-    $signature = hash_hmac('sha256', "{$timestamp}.{$payload}", (string) $secret);
-
-    return test()->call('POST', route('webhooks.pixelforge'), [], [], [], [
-        'CONTENT_TYPE' => 'application/json',
-        'HTTP_PIXELFORGE_SIGNATURE' => "t={$timestamp},v1={$signature}",
-    ], $payload);
-}
 
 test('an event with an invalid signature is rejected', function () {
     $generation = Generation::factory()->create(['pixelforge_id' => 'gen_01JC2Z8Q4N6V0M3H7X5T9R2B1K']);

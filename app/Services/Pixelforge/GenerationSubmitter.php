@@ -6,8 +6,10 @@ namespace App\Services\Pixelforge;
 
 use App\Models\Generation;
 use App\Models\User;
+use App\Services\Credits\CreditLedger;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
@@ -16,10 +18,13 @@ final class GenerationSubmitter
 {
     public const int MAXIMUM_PENDING_GENERATIONS = 3;
 
+    private const int NANODOLLARS_PER_CENT = 10_000_000;
+
     public function __construct(
         private GenerationPriceEstimator $estimator,
         private PixelforgeClient $client,
         private GenerationSynchroniser $synchroniser,
+        private CreditLedger $ledger,
     ) {}
 
     /**
@@ -29,24 +34,44 @@ final class GenerationSubmitter
      */
     public function submit(User $user, array $data): Generation
     {
-        if ($user->generations()->pending()->count() >= self::MAXIMUM_PENDING_GENERATIONS) {
-            throw $this->rejection('You already have 3 images generating. Try again when one finishes.');
-        }
+        $this->ensureFewerThanMaximumPending($user);
 
         $referenceImageUrls = $data['reference_image_urls'] ?? [];
         $estimate = $this->estimate([...$data, 'reference_image_urls' => $referenceImageUrls]);
 
-        $generation = $user->generations()->create([
-            'idempotency_key' => (string) Str::uuid(),
-            'prompt' => $data['prompt'],
-            'size' => $data['size'],
-            'quality' => $data['quality'],
-            'reference_image_urls' => $referenceImageUrls,
-            'estimated_cost_nanodollars' => $estimate->userCost,
-            'estimated_minimum_cost_nanodollars' => $estimate->minimumUserCost,
-            'estimated_maximum_cost_nanodollars' => $estimate->maximumUserCost,
-            'estimated_tokens' => $estimate->toArray()['tokens'],
-        ]);
+        $generation = DB::transaction(function () use ($user, $data, $referenceImageUrls, $estimate): Generation {
+            $this->ledger->lockAccount($user);
+
+            $this->ensureFewerThanMaximumPending($user);
+
+            $balance = $this->ledger->balanceFor($user);
+
+            if ($balance < $estimate->maximumUserCost) {
+                throw ValidationException::withMessages([
+                    'credits' => sprintf(
+                        'This image could cost up to %s and your balance is %s. Buy credits to keep generating.',
+                        $this->dollarsRoundedUp($estimate->maximumUserCost),
+                        $this->dollarsRoundedDown($balance),
+                    ),
+                ]);
+            }
+
+            $generation = $user->generations()->create([
+                'idempotency_key' => (string) Str::uuid(),
+                'prompt' => $data['prompt'],
+                'size' => $data['size'],
+                'quality' => $data['quality'],
+                'reference_image_urls' => $referenceImageUrls,
+                'estimated_cost_nanodollars' => $estimate->userCost,
+                'estimated_minimum_cost_nanodollars' => $estimate->minimumUserCost,
+                'estimated_maximum_cost_nanodollars' => $estimate->maximumUserCost,
+                'estimated_tokens' => $estimate->toArray()['tokens'],
+            ]);
+
+            $this->ledger->holdFor($generation);
+
+            return $generation;
+        });
 
         try {
             $pixelforgeGeneration = $this->client->createGeneration([
@@ -89,6 +114,28 @@ final class GenerationSubmitter
             'overloaded' => 'Pixelforge is busy right now. Try again in a moment.',
             default => "We couldn't start this image. Try again in a moment.",
         };
+    }
+
+    private function ensureFewerThanMaximumPending(User $user): void
+    {
+        if ($user->generations()->pending()->count() >= self::MAXIMUM_PENDING_GENERATIONS) {
+            throw $this->rejection('You already have 3 images generating. Try again when one finishes.');
+        }
+    }
+
+    private function dollarsRoundedUp(int $nanodollars): string
+    {
+        return $this->dollarsFromCents(intdiv(max(0, $nanodollars) + self::NANODOLLARS_PER_CENT - 1, self::NANODOLLARS_PER_CENT));
+    }
+
+    private function dollarsRoundedDown(int $nanodollars): string
+    {
+        return $this->dollarsFromCents(intdiv(max(0, $nanodollars), self::NANODOLLARS_PER_CENT));
+    }
+
+    private function dollarsFromCents(int $cents): string
+    {
+        return sprintf('$%d.%02d', intdiv($cents, 100), $cents % 100);
     }
 
     private function rejection(string $message): ValidationException

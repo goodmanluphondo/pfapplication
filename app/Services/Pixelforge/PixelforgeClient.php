@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Pixelforge;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
@@ -50,6 +51,19 @@ final class PixelforgeClient
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    public function usage(CarbonImmutable $startDate, CarbonImmutable $endDate): array
+    {
+        $response = $this->send(fn (PendingRequest $request) => $request->get('/usage', [
+            'start_date' => $startDate->toDateString(),
+            'end_date' => $endDate->toDateString(),
+        ]));
+
+        return $this->objectFrom($response, 'usage');
+    }
+
+    /**
      * @param  callable(PendingRequest): Response  $request
      */
     private function send(callable $request): Response
@@ -72,9 +86,17 @@ final class PixelforgeClient
      */
     private function generationFrom(Response $response): array
     {
+        return $this->objectFrom($response, 'generation');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function objectFrom(Response $response, string $expectedObject): array
+    {
         $body = $response->json();
 
-        if ($response->successful() && is_array($body) && ($body['object'] ?? null) === 'generation') {
+        if ($response->successful() && is_array($body) && ($body['object'] ?? null) === $expectedObject) {
             return $body;
         }
 

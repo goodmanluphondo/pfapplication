@@ -41,8 +41,33 @@ final class Nanodollars
         return intdiv($providerCost * self::MARKUP_NUMERATOR + self::MARKUP_DENOMINATOR - 1, self::MARKUP_DENOMINATOR);
     }
 
+    public static function fromUsd(string $usd): int
+    {
+        if (! preg_match('/^(\d+)(?:\.(\d{1,9}))?$/', $usd, $matches)) {
+            throw new RuntimeException('Pixelforge returned a cost with unsupported precision.');
+        }
+
+        return ((int) $matches[1] * self::PER_DOLLAR) + (int) str_pad($matches[2] ?? '', 9, '0');
+    }
+
+    public static function fromWholeDollars(int $dollars): int
+    {
+        return $dollars * self::PER_DOLLAR;
+    }
+
+    public static function toExactDollars(int $nanodollars): string
+    {
+        [$whole, $fraction] = explode('.', ltrim(self::toUsd($nanodollars), '-'));
+        $sign = $nanodollars < 0 ? '-' : '';
+
+        return $sign.'$'.$whole.'.'.str_pad(rtrim($fraction, '0'), 2, '0');
+    }
+
     public static function toUsd(int $nanodollars): string
     {
-        return sprintf('%d.%09d', intdiv($nanodollars, self::PER_DOLLAR), $nanodollars % self::PER_DOLLAR);
+        $sign = $nanodollars < 0 ? '-' : '';
+        $magnitude = abs($nanodollars);
+
+        return sprintf('%s%d.%09d', $sign, intdiv($magnitude, self::PER_DOLLAR), $magnitude % self::PER_DOLLAR);
     }
 }

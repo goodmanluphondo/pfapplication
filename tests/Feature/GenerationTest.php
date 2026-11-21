@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\Generations\GenerationStatus;
+use App\Models\CreditTransaction;
 use App\Models\Generation;
 use App\Models\User;
 use Illuminate\Http\Client\Request;
@@ -9,25 +10,11 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
 use Inertia\Testing\AssertableInertia;
 
-const PRICING_URL = 'pixelforge.promptedit.dev/v1/pricing';
-const GENERATIONS_URL = 'pixelforge.promptedit.dev/v1/generations';
-
 beforeEach(function () {
     config(['inertia.ssr.enabled' => false]);
     Cache::flush();
     Http::preventStrayRequests();
 });
-
-function validPrompt(array $overrides = []): array
-{
-    return [
-        'prompt' => 'A lighthouse on a cliff at dawn',
-        'size' => '1024x1024',
-        'quality' => 'medium',
-        'reference_image_urls' => [],
-        ...$overrides,
-    ];
-}
 
 test('guests are sent to log in instead of generating', function () {
     $this->post(route('generations.store'), validPrompt())->assertRedirect(route('login'));
@@ -37,6 +24,7 @@ test('guests are sent to log in instead of generating', function () {
 
 test('a prompt is submitted to Pixelforge and saved with its estimate', function () {
     $user = User::factory()->create();
+    CreditTransaction::factory()->for($user)->create();
     Http::fake([
         PRICING_URL => Http::response(pixelforgePricingResponse()),
         GENERATIONS_URL => Http::response(pixelforgeGeneration(), 202),
@@ -81,6 +69,7 @@ test('a fourth image cannot start while three are generating', function () {
 
 test('a prompt rejected by the content policy is not kept', function () {
     $user = User::factory()->create();
+    CreditTransaction::factory()->for($user)->create();
     Http::fake([
         PRICING_URL => Http::response(pixelforgePricingResponse()),
         GENERATIONS_URL => Http::response(['error' => [
@@ -100,6 +89,7 @@ test('a prompt rejected by the content policy is not kept', function () {
 test('an overloaded Pixelforge is retried with the same idempotency key', function () {
     Sleep::fake();
     $user = User::factory()->create();
+    CreditTransaction::factory()->for($user)->create();
     Http::fake([
         PRICING_URL => Http::response(pixelforgePricingResponse()),
         GENERATIONS_URL => Http::sequence()
@@ -151,6 +141,7 @@ test('history hides image links once they have expired', function () {
 
 test('a failed generation can be retried with the same settings', function () {
     $user = User::factory()->create();
+    CreditTransaction::factory()->for($user)->create();
     $failed = Generation::factory()->for($user)->failed()->create([
         'prompt' => 'Retry me',
         'quality' => 'high',

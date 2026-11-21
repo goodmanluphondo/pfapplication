@@ -7,6 +7,7 @@ import GenerationDetailsDialog from '@/components/generations/GenerationDetailsD
 import RecentGenerations from '@/components/generations/RecentGenerations.vue';
 import CostEstimatePopover from '@/components/prompt/CostEstimatePopover.vue';
 import ReferenceImagesPopover from '@/components/prompt/ReferenceImagesPopover.vue';
+import BuyCreditsDialog from '@/components/credits/BuyCreditsDialog.vue';
 import { useGenerationPolling } from '@/composables/useGenerationPolling';
 import {
     formatUsd,
@@ -55,6 +56,10 @@ const priceEstimate = ref<PriceEstimate | null>(null);
 const isEstimateUnavailable = ref(false);
 const activeOption = ref<PromptOption | null>(null);
 const selectedGenerationId = ref<number | null>(null);
+const isBuyCreditsOpen = ref(false);
+const creditsError = computed(
+    () => (form.errors as Record<string, string | undefined>).credits,
+);
 let estimateTimer: ReturnType<typeof setTimeout> | undefined;
 let estimateRevision = 0;
 
@@ -435,6 +440,20 @@ watch(
                 >
                     {{ error }}
                 </p>
+                <p
+                    v-if="creditsError"
+                    class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm leading-5 text-destructive-foreground"
+                    role="alert"
+                >
+                    {{ creditsError }}
+                    <button
+                        type="button"
+                        class="rounded-full bg-[#202124] px-4 py-1.5 text-[13px] font-medium text-white transition hover:bg-[#3c4043] dark:bg-[#e8eaed] dark:text-[#202124] dark:hover:bg-white"
+                        @click="isBuyCreditsOpen = true"
+                    >
+                        Buy credits
+                    </button>
+                </p>
             </div>
 
             <RecentGenerations
@@ -446,6 +465,11 @@ watch(
         </section>
 
         <AppFooter />
+
+        <BuyCreditsDialog
+            v-if="page.props.auth.user"
+            v-model:open="isBuyCreditsOpen"
+        />
 
         <GenerationDetailsDialog
             :generation="selectedGeneration"
