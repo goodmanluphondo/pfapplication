@@ -23,10 +23,13 @@ class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
+        $adminDomain = config('filament.admin_domain');
+
         return $panel
             ->default()
             ->id('admin')
-            ->path('admin')
+            ->path($adminDomain ? '' : 'admin')
+            ->domain($adminDomain)
             ->authGuard('admin')
             ->login()
             ->colors([
