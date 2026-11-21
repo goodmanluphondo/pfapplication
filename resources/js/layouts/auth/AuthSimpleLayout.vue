@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
-import { home } from '@/routes';
+import { Link, usePage } from "@inertiajs/vue3";
+import { home } from "@/routes";
+
+const page = usePage();
 
 defineProps<{
     title?: string;
@@ -10,34 +11,73 @@ defineProps<{
 </script>
 
 <template>
-    <div
-        class="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10"
+    <main
+        class="flex min-h-screen flex-col items-center justify-center bg-white px-5 py-10 text-[#202124] dark:bg-[#202124] dark:text-[#e8eaed]"
     >
-        <div class="w-full max-w-sm">
-            <div class="flex flex-col gap-8">
-                <div class="flex flex-col items-center gap-4">
-                    <Link
-                        :href="home()"
-                        class="flex flex-col items-center gap-2 font-medium"
-                    >
-                        <div
-                            class="mb-1 flex h-9 w-9 items-center justify-center rounded-md"
-                        >
-                            <AppLogoIcon
-                                class="size-9 fill-current text-[var(--foreground)] dark:text-white"
-                            />
-                        </div>
-                        <span class="sr-only">{{ title }}</span>
-                    </Link>
-                    <div class="space-y-2 text-center">
-                        <h1 class="text-xl font-medium">{{ title }}</h1>
-                        <p class="text-center text-sm text-muted-foreground">
-                            {{ description }}
-                        </p>
-                    </div>
-                </div>
+        <div
+            class="w-full max-w-md rounded-[28px] border border-[#dadce0] bg-white shadow-sm dark:border-[#5f6368] dark:bg-[#303134]"
+        >
+            <div class="px-6 pt-8 text-center sm:px-10">
+                <Link
+                    :href="home()"
+                    class="inline-flex rounded-full text-lg font-semibold tracking-tight text-[#202124] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#5f6368] dark:text-[#f8f9fa]"
+                >
+                    {{ page.props.name }}
+                </Link>
+            </div>
+
+            <header class="mt-5 space-y-2 px-6 text-center sm:px-10">
+                <h1 class="text-xl font-medium tracking-tight text-[#202124] dark:text-[#f8f9fa]">
+                    {{ title }}
+                </h1>
+                <p class="text-sm leading-5 text-[#5f6368] dark:text-[#bdc1c6]">
+                    {{ description }}
+                </p>
+            </header>
+
+            <div class="auth-controls px-6 py-8 sm:px-10">
                 <slot />
             </div>
         </div>
-    </div>
+    </main>
 </template>
+
+<style scoped>
+.auth-controls :deep([data-slot="input"]) {
+    border-color: #dadce0;
+    border-radius: 1rem;
+    background-color: #fff;
+}
+
+.dark .auth-controls :deep([data-slot="input"]) {
+    border-color: #5f6368;
+    background-color: #303134;
+}
+
+.auth-controls
+    :deep(
+        [data-slot="button"]:not([data-size="icon"]):not([data-size="icon-sm"]):not(
+                [data-size="icon-lg"]
+            )
+    ) {
+    border-radius: 9999px;
+}
+
+.auth-controls :deep([data-slot="button"][type="submit"]) {
+    background-color: #202124;
+    color: #fff;
+}
+
+.auth-controls :deep([data-slot="button"][type="submit"]:hover:not(:disabled)) {
+    background-color: #3c4043;
+}
+
+.dark .auth-controls :deep([data-slot="button"][type="submit"]) {
+    background-color: #e8eaed;
+    color: #202124;
+}
+
+.dark .auth-controls :deep([data-slot="button"][type="submit"]:hover:not(:disabled)) {
+    background-color: #fff;
+}
+</style>
