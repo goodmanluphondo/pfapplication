@@ -18,4 +18,4 @@ Route::post('/prompt', function (Request $request): RedirectResponse {
     return back();
 })->middleware('auth')->name('prompt.submit');
 
-require __DIR__.'/settings.php';
+require __DIR__.'/profile.php';

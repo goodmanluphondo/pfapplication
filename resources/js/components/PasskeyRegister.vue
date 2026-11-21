@@ -5,6 +5,10 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    index as registrationOptions,
+    store as registrationStore,
+} from '@/actions/Laravel/Passkeys/Http/Controllers/PasskeyRegistrationController';
 
 const emit = defineEmits<{
     success: [];
@@ -36,6 +40,10 @@ const name = ref(getDefaultPasskeyName());
 const showForm = ref(false);
 
 const { register, isLoading, error, isSupported } = usePasskeyRegister({
+    routes: {
+        options: registrationOptions().url,
+        submit: registrationStore().url,
+    },
     onSuccess: () => {
         name.value = '';
         showForm.value = false;

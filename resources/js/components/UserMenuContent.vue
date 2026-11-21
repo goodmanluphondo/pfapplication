@@ -25,23 +25,32 @@ defineProps<Props>();
 
 <template>
     <DropdownMenuLabel class="p-0 font-normal">
-        <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-            <UserInfo :user="user" :show-email="true" />
+        <div class="flex items-center gap-3 px-3 py-3 text-left text-sm">
+            <UserInfo
+                :user="user"
+                :show-email="true"
+                avatar-class="size-10 rounded-full"
+                avatar-fallback-class="rounded-full bg-[#f1f3f4] text-[#5f6368] dark:bg-[#3c4043] dark:text-[#e8eaed]"
+            />
         </div>
     </DropdownMenuLabel>
-    <DropdownMenuSeparator />
+    <DropdownMenuSeparator class="mx-2 my-2 bg-[#e8eaed] dark:bg-[#5f6368]" />
     <DropdownMenuGroup>
-        <DropdownMenuItem :as-child="true">
-            <Link class="block w-full cursor-pointer" :href="edit()" prefetch>
+        <DropdownMenuItem
+            :as-child="true"
+            class="rounded-full px-3 py-2.5 text-[13px] text-[#3c4043] transition-colors focus:bg-[#f1f3f4] focus:text-[#202124] dark:text-[#e8eaed] dark:focus:bg-[#3c4043] dark:focus:text-white"
+        >
+            <Link class="flex w-full cursor-pointer items-center" :href="edit()" prefetch>
                 <UserIcon class="mr-2 h-4 w-4" />
                 Profile
             </Link>
         </DropdownMenuItem>
-    </DropdownMenuGroup>
-    <DropdownMenuSeparator />
-    <DropdownMenuItem :as-child="true">
+        <DropdownMenuItem
+            :as-child="true"
+            class="rounded-full px-3 py-2.5 text-[13px] text-[#3c4043] transition-colors focus:bg-[#f1f3f4] focus:text-[#202124] dark:text-[#e8eaed] dark:focus:bg-[#3c4043] dark:focus:text-white"
+        >
         <Link
-            class="block w-full cursor-pointer"
+            class="flex w-full cursor-pointer items-center"
             :href="logout()"
             @click="handleLogout"
             as="button"
@@ -50,5 +59,6 @@ defineProps<Props>();
             <LogOut class="mr-2 h-4 w-4" />
             Sign out
         </Link>
-    </DropdownMenuItem>
+        </DropdownMenuItem>
+    </DropdownMenuGroup>
 </template>

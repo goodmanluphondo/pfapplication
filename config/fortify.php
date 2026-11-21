@@ -90,6 +90,14 @@ return [
 
     'domain' => null,
 
+    'paths' => [
+        'passkey' => [
+            'registration-options' => '/profile/passkeys/options',
+            'store' => '/profile/passkeys',
+            'destroy' => '/profile/passkeys/{passkey}',
+        ],
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Fortify Routes Middleware

@@ -7,10 +7,14 @@ import type { User } from '@/types';
 type Props = {
     user: User;
     showEmail?: boolean;
+    avatarClass?: string;
+    avatarFallbackClass?: string;
 };
 
 const props = withDefaults(defineProps<Props>(), {
     showEmail: false,
+    avatarClass: '',
+    avatarFallbackClass: '',
 });
 
 const { getInitials } = useInitials();
@@ -25,9 +29,11 @@ const showAvatar = computed(
 </script>
 
 <template>
-    <Avatar class="h-8 w-8 overflow-hidden rounded-lg">
+    <Avatar :class="['h-8 w-8 overflow-hidden rounded-lg', avatarClass]">
         <AvatarImage v-if="showAvatar" :src="user.avatar!" :alt="fullName" />
-        <AvatarFallback class="rounded-lg text-black dark:text-white">
+        <AvatarFallback
+            :class="['rounded-lg text-black dark:text-white', avatarFallbackClass]"
+        >
             {{ getInitials(fullName) }}
         </AvatarFallback>
     </Avatar>
