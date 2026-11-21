@@ -276,7 +276,7 @@ watch(
                         rows="3"
                     />
                     <div
-                        class="mt-3 flex flex-wrap items-center justify-between gap-3 pt-3"
+                        class="relative mt-3 flex flex-wrap items-center justify-between gap-3 pt-3"
                     >
                         <div class="flex flex-wrap items-center gap-2">
                             <div class="relative" data-prompt-option>

@@ -6,7 +6,7 @@ const { size = 'md' } = defineProps<{
 
 <template>
     <span
-        class="flex items-center text-[#202124] dark:text-[#f8f9fa]"
+        class="flex min-w-0 items-center text-[#202124] dark:text-[#f8f9fa]"
         :class="size === 'lg' ? 'gap-2.5' : 'gap-2'"
     >
         <svg
@@ -42,7 +42,9 @@ const { size = 'md' } = defineProps<{
         </svg>
         <span
             class="pb-0.5 font-[Quicksand] leading-none font-bold tracking-[-0.01em]"
-            :class="size === 'lg' ? 'text-[26px]' : 'text-[21px]'"
+            :class="
+                size === 'lg' ? 'text-[26px]' : 'text-[21px] max-[419px]:hidden'
+            "
         >
             application
         </span>

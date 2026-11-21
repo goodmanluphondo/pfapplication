@@ -51,7 +51,7 @@ function toggle(): void {
 
 <template>
     <div
-        class="relative"
+        class="static"
         data-prompt-option
         @mouseenter="isHovered = true"
         @mouseleave="isHovered = false"
@@ -73,11 +73,14 @@ function toggle(): void {
             <Info v-else aria-hidden="true" class="size-4" />
         </button>
 
-        <div v-if="isOpen" class="absolute right-0 bottom-full z-20 pb-2">
+        <div
+            v-if="isOpen"
+            class="absolute right-[-21px] bottom-[calc(100%-12px)] z-20 pb-2"
+        >
             <div
                 id="cost-estimate-details"
                 role="tooltip"
-                class="grid w-[300px] max-w-[calc(100vw-2rem)] gap-3 rounded-2xl border border-[#e0e0e0] bg-white p-4 text-[#202124] shadow-lg dark:border-[#5f6368] dark:bg-[#303134] dark:text-[#e8eaed]"
+                class="grid w-[300px] max-w-[calc(100vw-40px)] gap-3 rounded-2xl border border-[#e0e0e0] bg-white p-4 text-[#202124] shadow-lg dark:border-[#5f6368] dark:bg-[#303134] dark:text-[#e8eaed]"
             >
                 <p
                     v-if="isUnavailable && !estimate"

@@ -10,9 +10,9 @@ const isPrivacyNoticeOpen = ref(false);
 
 <template>
     <footer
-        class="absolute inset-x-0 bottom-0 flex min-h-14 items-center justify-between gap-4 px-6 py-3 text-xs text-[#5f6368] dark:text-[#bdc1c6]"
+        class="absolute inset-x-0 bottom-0 flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-3 text-xs text-[#5f6368] sm:px-6 dark:text-[#bdc1c6]"
     >
-        <p>
+        <p class="basis-full sm:flex-1 sm:basis-0">
             Copyright &copy; {{ currentYear }} {{ page.props.name }}. All rights
             reserved.
         </p>

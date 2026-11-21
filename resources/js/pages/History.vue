@@ -69,7 +69,7 @@ const summaryCards = computed(() => [
                 </header>
 
                 <div
-                    class="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3"
+                    class="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3"
                 >
                     <div
                         v-for="card in summaryCards"
@@ -97,60 +97,45 @@ const summaryCards = computed(() => [
 
                 <div
                     v-if="generations.length"
-                    class="overflow-x-auto rounded-[20px] border border-[#dadce0] dark:border-[#5f6368]"
+                    class="overflow-hidden rounded-[20px] border border-[#dadce0] dark:border-[#5f6368]"
                 >
-                    <div class="min-w-[560px]">
-                        <div
-                            class="flex items-center gap-4 border-b border-[#dadce0] px-5 py-2.5 text-xs leading-4 text-[#5f6368] dark:border-[#5f6368] dark:text-[#bdc1c6]"
-                        >
-                            <span class="w-14 shrink-0" />
-                            <span class="flex-1">Prompt</span>
-                            <span class="w-24 shrink-0">Status</span>
-                            <span class="w-22 shrink-0 text-right"
-                                >Estimated</span
+                    <button
+                        v-for="generation in generations"
+                        :key="generation.id"
+                        type="button"
+                        class="flex w-full flex-wrap items-center gap-x-4 gap-y-2 border-b border-[#dadce0] px-4 py-3 text-left transition last:border-b-0 hover:bg-[#f8f9fa] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#5f6368] sm:px-5 dark:border-[#5f6368] dark:hover:bg-[#3c4043]"
+                        @click="selectedGenerationId = generation.id"
+                    >
+                        <GenerationThumbnail
+                            :generation="generation"
+                            size="md"
+                        />
+                        <span class="grid min-w-0 flex-[1_1_200px] gap-0.5">
+                            <span class="truncate text-sm leading-5">{{
+                                generation.prompt
+                            }}</span>
+                            <span
+                                class="text-xs leading-4 text-[#5f6368] dark:text-[#bdc1c6]"
                             >
-                            <span class="w-22 shrink-0 text-right"
-                                >Charged</span
-                            >
-                        </div>
-                        <button
-                            v-for="generation in generations"
-                            :key="generation.id"
-                            type="button"
-                            class="flex w-full items-center gap-4 border-b border-[#dadce0] px-5 py-3 text-left transition last:border-b-0 hover:bg-[#f8f9fa] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#5f6368] dark:border-[#5f6368] dark:hover:bg-[#3c4043]"
-                            @click="selectedGenerationId = generation.id"
-                        >
-                            <GenerationThumbnail
-                                :generation="generation"
-                                size="md"
-                            />
-                            <span class="grid min-w-0 flex-1 gap-0.5">
-                                <span class="truncate text-sm leading-5">{{
-                                    generation.prompt
-                                }}</span>
+                                {{ generationMeta(generation) }}
+                            </span>
+                        </span>
+                        <span class="ml-auto flex items-center gap-4">
+                            <GenerationStatusBadge :generation="generation" />
+                            <span class="grid min-w-[84px] text-right">
+                                <span class="text-sm leading-5 font-medium">
+                                    {{ chargedLabel(generation) }}
+                                </span>
                                 <span
                                     class="text-xs leading-4 text-[#5f6368] dark:text-[#bdc1c6]"
                                 >
-                                    {{ generationMeta(generation) }}
+                                    Est. ~{{
+                                        formatUsd(generation.estimated_cost_usd)
+                                    }}
                                 </span>
                             </span>
-                            <span class="w-24 shrink-0">
-                                <GenerationStatusBadge
-                                    :generation="generation"
-                                />
-                            </span>
-                            <span
-                                class="w-22 shrink-0 text-right text-sm leading-5 text-[#5f6368] dark:text-[#bdc1c6]"
-                            >
-                                ~{{ formatUsd(generation.estimated_cost_usd) }}
-                            </span>
-                            <span
-                                class="w-22 shrink-0 text-right text-sm leading-5 font-medium"
-                            >
-                                {{ chargedLabel(generation) }}
-                            </span>
-                        </button>
-                    </div>
+                        </span>
+                    </button>
                 </div>
 
                 <div

@@ -84,12 +84,12 @@ function remove(index: number): void {
 </script>
 
 <template>
-    <div class="relative" data-prompt-option>
+    <div class="static" data-prompt-option>
         <div
             v-if="isOpen"
             id="reference-image-menu"
             aria-label="Reference images"
-            class="absolute bottom-full left-0 z-20 mb-2 grid max-h-[calc(100vh-8rem)] w-[360px] max-w-[calc(100vw-2rem)] gap-3.5 overflow-y-auto rounded-[20px] border border-[#e0e0e0] bg-white p-4 shadow-lg dark:border-[#5f6368] dark:bg-[#303134]"
+            class="absolute bottom-full -left-[21px] z-20 mb-2 grid max-h-[calc(100vh-8rem)] w-[360px] max-w-[calc(100vw-40px)] gap-3.5 overflow-y-auto rounded-[20px] border border-[#e0e0e0] bg-white p-4 shadow-lg dark:border-[#5f6368] dark:bg-[#303134]"
             role="group"
         >
             <div class="grid gap-1">
@@ -181,7 +181,7 @@ function remove(index: number): void {
                             :id="`reference-image-url-${index}`"
                             v-model="referenceImageUrls[index]"
                             :aria-invalid="errorFor(url, index) !== ''"
-                            class="h-10 min-w-0 rounded-[10px] border bg-white px-3 text-sm text-[#202124] transition outline-none placeholder:text-[#70757a] focus-visible:border-[#5f6368] focus-visible:ring-2 focus-visible:ring-[#5f6368]/20 dark:bg-[#202124] dark:text-[#e8eaed] dark:placeholder:text-[#9aa0a6]"
+                            class="h-10 min-w-0 rounded-[10px] border bg-white px-3 text-base text-[#202124] transition outline-none placeholder:text-[#70757a] focus-visible:border-[#5f6368] focus-visible:ring-2 focus-visible:ring-[#5f6368]/20 md:text-sm dark:bg-[#202124] dark:text-[#e8eaed] dark:placeholder:text-[#9aa0a6]"
                             :class="
                                 errorFor(url, index)
                                     ? 'border-destructive-foreground'

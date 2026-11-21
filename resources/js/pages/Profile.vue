@@ -1,25 +1,29 @@
 <script setup lang="ts">
-import { Form, Head, usePage } from "@inertiajs/vue3";
-import { computed, ref } from "vue";
-import ProfileController from "@/actions/App/Http/Controllers/Settings/ProfileController";
-import DeleteUser from "@/components/DeleteUser.vue";
-import AppFooter from "@/components/AppFooter.vue";
-import AppHeader from "@/components/AppHeader.vue";
-import InputError from "@/components/InputError.vue";
-import ManagePasskeys from "@/components/ManagePasskeys.vue";
-import PasswordInput from "@/components/PasswordInput.vue";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import type { Passkey } from "@/types/auth";
+import { Form, Head, usePage } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
+import DeleteUser from '@/components/DeleteUser.vue';
+import AppFooter from '@/components/AppFooter.vue';
+import AppHeader from '@/components/AppHeader.vue';
+import InputError from '@/components/InputError.vue';
+import ManagePasskeys from '@/components/ManagePasskeys.vue';
+import PasswordInput from '@/components/PasswordInput.vue';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import type { Passkey } from '@/types/auth';
 
-type AccountTab = "personal-information" | "password-management" | "passkey" | "delete-account";
+type AccountTab =
+    | 'personal-information'
+    | 'password-management'
+    | 'passkey'
+    | 'delete-account';
 
 const tabs: { id: AccountTab; label: string }[] = [
-    { id: "personal-information", label: "Personal information" },
-    { id: "password-management", label: "Password management" },
-    { id: "passkey", label: "Passkey" },
-    { id: "delete-account", label: "Delete account" },
+    { id: 'personal-information', label: 'Personal information' },
+    { id: 'password-management', label: 'Password management' },
+    { id: 'passkey', label: 'Passkey' },
+    { id: 'delete-account', label: 'Delete account' },
 ];
 
 const props = defineProps<{
@@ -30,18 +34,18 @@ const props = defineProps<{
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
-const activeTab = ref<AccountTab>("personal-information");
+const activeTab = ref<AccountTab>('personal-information');
 
 function handleTabKeydown(event: KeyboardEvent, currentIndex: number): void {
     let nextIndex: number;
 
-    if (event.key === "ArrowRight") {
+    if (event.key === 'ArrowRight') {
         nextIndex = (currentIndex + 1) % tabs.length;
-    } else if (event.key === "ArrowLeft") {
+    } else if (event.key === 'ArrowLeft') {
         nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
-    } else if (event.key === "Home") {
+    } else if (event.key === 'Home') {
         nextIndex = 0;
-    } else if (event.key === "End") {
+    } else if (event.key === 'End') {
         nextIndex = tabs.length - 1;
     } else {
         return;
@@ -61,11 +65,11 @@ function handleTabKeydown(event: KeyboardEvent, currentIndex: number): void {
     >
         <AppHeader />
 
-        <section class="flex flex-1 flex-col px-5 pb-24 pt-24">
+        <section class="flex flex-1 flex-col px-5 pt-24 pb-24">
             <div class="mx-auto w-full max-w-4xl space-y-8">
                 <header class="space-y-2">
                     <h1
-                        class="text-[clamp(1.25rem,3vw,1.75rem)] font-medium leading-tight tracking-tight text-[#202124] dark:text-[#f8f9fa]"
+                        class="text-[clamp(1.25rem,3vw,1.75rem)] leading-tight font-medium tracking-tight text-[#202124] dark:text-[#f8f9fa]"
                     >
                         Profile
                     </h1>
@@ -75,9 +79,13 @@ function handleTabKeydown(event: KeyboardEvent, currentIndex: number): void {
                 </header>
 
                 <div
-                    class="-mx-4 overflow-x-auto border-b border-[#dadce0] px-4 dark:border-[#5f6368] sm:mx-0 sm:px-0"
+                    class="-mx-4 overflow-x-auto border-b border-[#dadce0] px-4 sm:mx-0 sm:px-0 dark:border-[#5f6368]"
                 >
-                    <div class="flex min-w-max gap-2" role="tablist" aria-label="Profile settings">
+                    <div
+                        class="flex min-w-max gap-2"
+                        role="tablist"
+                        aria-label="Profile settings"
+                    >
                         <button
                             v-for="(tab, index) in tabs"
                             :id="`account-tab-${tab.id}`"
@@ -110,7 +118,9 @@ function handleTabKeydown(event: KeyboardEvent, currentIndex: number): void {
                     tabindex="0"
                 >
                     <div class="space-y-1">
-                        <h2 class="text-base font-medium text-[#202124] dark:text-[#e8eaed]">
+                        <h2
+                            class="text-base font-medium text-[#202124] dark:text-[#e8eaed]"
+                        >
                             Personal information
                         </h2>
                         <p class="text-sm text-[#5f6368] dark:text-[#bdc1c6]">
@@ -134,7 +144,10 @@ function handleTabKeydown(event: KeyboardEvent, currentIndex: number): void {
                                 autocomplete="given-name"
                                 placeholder="First name"
                             />
-                            <InputError class="mt-2" :message="errors.first_name" />
+                            <InputError
+                                class="mt-2"
+                                :message="errors.first_name"
+                            />
                         </div>
 
                         <div class="grid gap-2">
@@ -148,7 +161,10 @@ function handleTabKeydown(event: KeyboardEvent, currentIndex: number): void {
                                 autocomplete="family-name"
                                 placeholder="Last name"
                             />
-                            <InputError class="mt-2" :message="errors.last_name" />
+                            <InputError
+                                class="mt-2"
+                                :message="errors.last_name"
+                            />
                         </div>
 
                         <div class="grid gap-2">
@@ -185,7 +201,9 @@ function handleTabKeydown(event: KeyboardEvent, currentIndex: number): void {
                     tabindex="0"
                 >
                     <div class="space-y-1">
-                        <h2 class="text-base font-medium text-[#202124] dark:text-[#e8eaed]">
+                        <h2
+                            class="text-base font-medium text-[#202124] dark:text-[#e8eaed]"
+                        >
                             Password management
                         </h2>
                         <p class="text-sm text-[#5f6368] dark:text-[#bdc1c6]">
@@ -197,12 +215,18 @@ function handleTabKeydown(event: KeyboardEvent, currentIndex: number): void {
                         v-bind="ProfileController.updatePassword.form()"
                         :options="{ preserveScroll: true }"
                         reset-on-success
-                        :reset-on-error="['password', 'password_confirmation', 'current_password']"
+                        :reset-on-error="[
+                            'password',
+                            'password_confirmation',
+                            'current_password',
+                        ]"
                         class="space-y-6"
                         v-slot="{ errors, processing }"
                     >
                         <div class="grid gap-2">
-                            <Label for="current_password">Current password</Label>
+                            <Label for="current_password"
+                                >Current password</Label
+                            >
                             <PasswordInput
                                 id="current_password"
                                 name="current_password"
@@ -227,7 +251,9 @@ function handleTabKeydown(event: KeyboardEvent, currentIndex: number): void {
                         </div>
 
                         <div class="grid gap-2">
-                            <Label for="password_confirmation">Confirm password</Label>
+                            <Label for="password_confirmation"
+                                >Confirm password</Label
+                            >
                             <PasswordInput
                                 id="password_confirmation"
                                 name="password_confirmation"
@@ -236,7 +262,9 @@ function handleTabKeydown(event: KeyboardEvent, currentIndex: number): void {
                                 placeholder="Confirm password"
                                 :passwordrules="props.passwordRules"
                             />
-                            <InputError :message="errors.password_confirmation" />
+                            <InputError
+                                :message="errors.password_confirmation"
+                            />
                         </div>
 
                         <Button

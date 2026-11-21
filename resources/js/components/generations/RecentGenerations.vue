@@ -36,11 +36,11 @@ const emit = defineEmits<{
             >
                 <button
                     type="button"
-                    class="flex w-full items-center gap-3.5 px-4 py-2.5 text-left transition hover:bg-[#f8f9fa] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#5f6368] dark:hover:bg-[#3c4043]"
+                    class="flex w-full flex-wrap items-center gap-x-3.5 gap-y-1.5 px-4 py-2.5 text-left transition hover:bg-[#f8f9fa] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#5f6368] dark:hover:bg-[#3c4043]"
                     @click="emit('open', generation)"
                 >
                     <GenerationThumbnail :generation="generation" />
-                    <span class="grid min-w-0 flex-1 gap-0.5">
+                    <span class="grid min-w-0 flex-[1_1_180px] gap-0.5">
                         <span class="truncate text-sm leading-5">{{
                             generation.prompt
                         }}</span>
@@ -50,11 +50,13 @@ const emit = defineEmits<{
                             {{ generationMeta(generation) }}
                         </span>
                     </span>
-                    <GenerationStatusBadge :generation="generation" />
-                    <span
-                        class="w-16 shrink-0 text-right text-sm leading-5 font-medium"
-                    >
-                        {{ costSummaryLabel(generation) }}
+                    <span class="ml-auto flex items-center gap-3.5">
+                        <GenerationStatusBadge :generation="generation" />
+                        <span
+                            class="min-w-12 shrink-0 text-right text-sm leading-5 font-medium"
+                        >
+                            {{ costSummaryLabel(generation) }}
+                        </span>
                     </span>
                 </button>
             </li>

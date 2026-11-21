@@ -197,7 +197,7 @@ function retryGeneration(): void {
                 </div>
             </div>
 
-            <div class="flex flex-col gap-5 p-6 sm:pl-2">
+            <div class="flex flex-col gap-5 px-6 pt-3 pb-6 min-[700px]:pt-6">
                 <div class="flex items-center justify-between gap-3">
                     <GenerationStatusBadge :generation="generation" />
                     <DialogClose

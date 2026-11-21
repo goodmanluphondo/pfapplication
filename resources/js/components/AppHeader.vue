@@ -33,12 +33,12 @@ function toggleAppearance(): void {
 
 <template>
     <header
-        class="absolute inset-x-0 top-0 z-20 flex h-16 items-center justify-between gap-5 px-6 text-[13px]"
+        class="absolute inset-x-0 top-0 z-20 flex h-16 items-center justify-between gap-3 px-4 text-[13px] sm:px-6"
     >
         <Link
             :href="home()"
             :aria-label="`${page.props.name} home`"
-            class="rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#5f6368]"
+            class="min-w-0 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#5f6368]"
         >
             <AppLogoLockup />
         </Link>
@@ -61,7 +61,7 @@ function toggleAppearance(): void {
             >
                 {{ formatUsd(page.props.credits.balance_usd) }}
                 <span
-                    class="ml-1 font-normal text-[#5f6368] dark:text-[#bdc1c6]"
+                    class="ml-1 hidden font-normal text-[#5f6368] sm:inline dark:text-[#bdc1c6]"
                 >
                     · Buy credits
                 </span>
