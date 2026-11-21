@@ -3,35 +3,6 @@
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
-function pixelforgePricingResponse(): array
-{
-    return [
-        'object' => 'pricing',
-        'currency' => 'usd',
-        'unit' => 'per_1m_tokens',
-        'rates' => [
-            'input_text_tokens' => '5.00',
-            'input_image_tokens' => '10.00',
-            'output_tokens' => '40.00',
-            'reasoning_tokens' => '12.50',
-        ],
-        'tokens' => [
-            'characters_per_text_token' => 4,
-            'per_reference_image' => 765,
-            'output' => [
-                'low' => ['1024x1024' => 280, '1024x1536' => 420, '1536x1024' => 420],
-                'medium' => ['1024x1024' => 1100, '1024x1536' => 1650, '1536x1024' => 1650],
-                'high' => ['1024x1024' => 4300, '1024x1536' => 6450, '1536x1024' => 6450],
-            ],
-            'reasoning' => [
-                'low' => ['min' => 0, 'max' => 500],
-                'medium' => ['min' => 200, 'max' => 2000],
-                'high' => ['min' => 1000, 'max' => 8000],
-            ],
-        ],
-    ];
-}
-
 test('it estimates the user price with the markup using provider pricing', function () {
     Cache::flush();
     Http::fake(['pixelforge.promptedit.dev/v1/pricing' => Http::response(pixelforgePricingResponse())]);
@@ -46,7 +17,29 @@ test('it estimates the user price with the markup using provider pricing', funct
     $response->assertOk()->assertExactJson([
         'estimated_provider_cost_usd' => '0.065405000',
         'estimated_user_cost_usd' => '0.081756250',
+        'minimum_user_cost_usd' => '0.067687500',
+        'maximum_user_cost_usd' => '0.095825000',
+        'per_reference_image_user_cost_usd' => '0.009562500',
+        'tokens' => [
+            'input_text' => ['estimated' => 1, 'minimum' => 0, 'maximum' => 2],
+            'input_image' => 765,
+            'output' => 1100,
+            'reasoning' => ['minimum' => 200, 'maximum' => 2000],
+        ],
     ]);
+});
+
+test('it estimates the base cost before a prompt is typed', function () {
+    Cache::flush();
+    Http::fake(['pixelforge.promptedit.dev/v1/pricing' => Http::response(pixelforgePricingResponse())]);
+
+    $this->postJson(route('prompt.estimate'), [
+        'prompt' => '',
+        'size' => '1024x1024',
+        'quality' => 'medium',
+    ])->assertOk()
+        ->assertJsonPath('estimated_user_cost_usd', '0.072187500')
+        ->assertJsonPath('tokens.input_text.estimated', 0);
 });
 
 test('it rejects unsupported quality and more than four reference urls', function () {

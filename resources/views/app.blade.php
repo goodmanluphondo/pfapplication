@@ -26,13 +26,21 @@
             }
 
             html.dark {
-                background-color: oklch(0.145 0 0);
+                background-color: #202124;
             }
         </style>
 
         <link rel="icon" href="/favicon.ico" sizes="any">
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+        <link rel="manifest" href="/site.webmanifest">
+        <meta name="theme-color" content="#202124">
+        <meta property="og:title" content="{{ config('app.name') }}">
+        <meta property="og:description" content="Generate images with Pixelforge.">
+        <meta property="og:image" content="{{ url('/og-image.png') }}">
+        <meta name="twitter:card" content="summary_large_image">
 
         @fonts
 

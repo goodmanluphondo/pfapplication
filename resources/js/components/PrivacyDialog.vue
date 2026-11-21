@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { usePage } from '@inertiajs/vue3';
 import { X } from '@lucide/vue';
 import {
     Dialog,
@@ -8,6 +9,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 
+const page = usePage();
 const open = defineModel<boolean>('open', { default: false });
 
 const sections = [
@@ -50,7 +52,7 @@ const sections = [
                     <DialogDescription
                         class="text-[13px] leading-[18px] text-[#5f6368] dark:text-[#bdc1c6]"
                     >
-                        What PF Application keeps, and why.
+                        What {{ page.props.name }} keeps, and why.
                     </DialogDescription>
                 </div>
                 <DialogClose

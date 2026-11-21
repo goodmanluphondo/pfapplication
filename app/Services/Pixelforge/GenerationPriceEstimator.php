@@ -6,19 +6,31 @@ namespace App\Services\Pixelforge;
 
 use RuntimeException;
 
-class GenerationPriceEstimator
+final class GenerationPriceEstimator
 {
-    /** @return array{estimated_provider_cost_usd: string, estimated_user_cost_usd: string} */
-    public function estimate(array $data): array
+    private const int PERCENT = 100;
+
+    public function __construct(private PixelforgePricingService $pricing) {}
+
+    /**
+     * @param  array{prompt?: string|null, size: string, quality: string, reference_image_urls?: list<string>|null}  $data
+     */
+    public function estimate(array $data): GenerationPriceEstimate
     {
-        $pricing = app(PixelforgePricingService::class)->current();
+        $pricing = $this->pricing->current();
         $tokens = $pricing['tokens'];
+        $rates = $pricing['rates'];
         $quality = $data['quality'];
         $size = $data['size'];
         $referenceCount = count($data['reference_image_urls'] ?? []);
+        $charactersPerTextToken = (int) $tokens['characters_per_text_token'];
+        $textTokenVariancePercent = (int) round(((float) ($tokens['text_token_variance'] ?? 0)) * self::PERCENT);
 
-        $textTokens = intdiv(mb_strlen($data['prompt']) + (int) $tokens['characters_per_text_token'] - 1, (int) $tokens['characters_per_text_token']);
-        $imageTokens = $referenceCount * (int) $tokens['per_reference_image'];
+        $textTokens = intdiv(mb_strlen((string) ($data['prompt'] ?? '')) + $charactersPerTextToken - 1, $charactersPerTextToken);
+        $minimumTextTokens = intdiv($textTokens * (self::PERCENT - $textTokenVariancePercent), self::PERCENT);
+        $maximumTextTokens = intdiv($textTokens * (self::PERCENT + $textTokenVariancePercent) + self::PERCENT - 1, self::PERCENT);
+        $tokensPerReferenceImage = (int) $tokens['per_reference_image'];
+        $imageTokens = $referenceCount * $tokensPerReferenceImage;
         $outputTokens = (int) ($tokens['output'][$quality][$size] ?? 0);
         $reasoning = $tokens['reasoning'][$quality] ?? null;
 
@@ -26,32 +38,25 @@ class GenerationPriceEstimator
             throw new RuntimeException('Pixelforge token pricing is incomplete.');
         }
 
-        $reasoningTokens = intdiv((int) $reasoning['min'] + (int) $reasoning['max'], 2);
-        $providerCost = ($textTokens * $this->nanoDollarsPerToken($pricing['rates']['input_text_tokens']))
-            + ($imageTokens * $this->nanoDollarsPerToken($pricing['rates']['input_image_tokens']))
-            + ($outputTokens * $this->nanoDollarsPerToken($pricing['rates']['output_tokens']))
-            + ($reasoningTokens * $this->nanoDollarsPerToken($pricing['rates']['reasoning_tokens']));
+        $minimumReasoningTokens = (int) $reasoning['min'];
+        $maximumReasoningTokens = (int) $reasoning['max'];
+        $typicalReasoningTokens = intdiv($minimumReasoningTokens + $maximumReasoningTokens, 2);
 
-        return [
-            'estimated_provider_cost_usd' => $this->formatUsd($providerCost),
-            'estimated_user_cost_usd' => $this->formatUsd(intdiv($providerCost * 5 + 3, 4)),
-        ];
-    }
+        $providerCost = Nanodollars::providerCost($rates, $textTokens, $imageTokens, $outputTokens, $typicalReasoningTokens);
 
-    private function nanoDollarsPerToken(string $ratePerMillion): int
-    {
-        if (! preg_match('/^\d+(?:\.\d{1,3})?$/', $ratePerMillion)) {
-            throw new RuntimeException('Pixelforge returned a token rate with unsupported precision.');
-        }
-
-        [$whole, $fraction] = array_pad(explode('.', $ratePerMillion, 2), 2, '');
-        $rateThousandths = ((int) $whole * 1000) + (int) str_pad($fraction, 3, '0');
-
-        return $rateThousandths;
-    }
-
-    private function formatUsd(int $nanoDollars): string
-    {
-        return sprintf('%d.%09d', intdiv($nanoDollars, 1_000_000_000), $nanoDollars % 1_000_000_000);
+        return new GenerationPriceEstimate(
+            providerCost: $providerCost,
+            userCost: Nanodollars::withMarkup($providerCost),
+            minimumUserCost: Nanodollars::withMarkup(Nanodollars::providerCost($rates, $minimumTextTokens, $imageTokens, $outputTokens, $minimumReasoningTokens)),
+            maximumUserCost: Nanodollars::withMarkup(Nanodollars::providerCost($rates, $maximumTextTokens, $imageTokens, $outputTokens, $maximumReasoningTokens)),
+            perReferenceImageUserCost: Nanodollars::withMarkup(Nanodollars::providerCost($rates, 0, $tokensPerReferenceImage, 0, 0)),
+            textTokens: $textTokens,
+            minimumTextTokens: $minimumTextTokens,
+            maximumTextTokens: $maximumTextTokens,
+            imageTokens: $imageTokens,
+            outputTokens: $outputTokens,
+            minimumReasoningTokens: $minimumReasoningTokens,
+            maximumReasoningTokens: $maximumReasoningTokens,
+        );
     }
 }

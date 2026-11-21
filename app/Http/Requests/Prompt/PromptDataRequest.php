@@ -26,4 +26,17 @@ class PromptDataRequest extends FormRequest
             'reference_image_urls.*' => ['required', 'url:http,https'],
         ];
     }
+
+    /**
+     * @return array{prompt: string, size: string, quality: string, reference_image_urls: list<string>}
+     */
+    public function promptData(): array
+    {
+        return [
+            'prompt' => $this->string('prompt')->toString(),
+            'size' => $this->string('size')->toString(),
+            'quality' => $this->string('quality')->toString(),
+            'reference_image_urls' => array_values(array_filter((array) ($this->validated('reference_image_urls') ?? []), is_string(...))),
+        ];
+    }
 }

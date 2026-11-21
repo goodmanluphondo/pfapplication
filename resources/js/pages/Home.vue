@@ -1,70 +1,182 @@
 <script setup lang="ts">
-import { Head, router, useForm, usePage } from "@inertiajs/vue3";
-import { computed, onMounted, ref, watch } from "vue";
-import { login } from "@/routes";
-import { submit as submitPromptRoute } from "@/routes/prompt";
-import AppFooter from "@/components/AppFooter.vue";
-import AppHeader from "@/components/AppHeader.vue";
-import { usePromptDraftStore } from "@/stores/promptDraft";
+import { Head, router, useForm, useHttp, usePage } from '@inertiajs/vue3';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import AppFooter from '@/components/AppFooter.vue';
+import AppHeader from '@/components/AppHeader.vue';
+import GenerationDetailsDialog from '@/components/generations/GenerationDetailsDialog.vue';
+import RecentGenerations from '@/components/generations/RecentGenerations.vue';
+import CostEstimatePopover from '@/components/prompt/CostEstimatePopover.vue';
+import ReferenceImagesPopover from '@/components/prompt/ReferenceImagesPopover.vue';
+import { useGenerationPolling } from '@/composables/useGenerationPolling';
+import {
+    formatUsd,
+    maximumReferenceImages,
+    qualityOptions,
+    sizeOptions,
+} from '@/lib/generations';
+import { login } from '@/routes';
+import { store as storeGeneration } from '@/routes/generations';
+import { estimate as estimatePromptRoute } from '@/routes/prompt';
+import { usePromptDraftStore } from '@/stores/promptDraft';
+import type { Generation, PriceEstimate } from '@/types/generation';
 
-const promptDraft = usePromptDraftStore();
-const form = useForm({
-    prompt: "",
-    size: "1024x1024",
-    quality: "standard",
-    reference_image_urls: [""],
-});
-const submittedPrompt = ref("");
+type PromptOption = 'size' | 'quality' | 'reference' | 'cost';
 
-onMounted(() => {
-    Object.assign(form, promptDraft.restore());
-});
+const maximumPromptLength = 4000;
+const estimateDebounceMilliseconds = 350;
 
-watch(
-    () => form.data(),
-    (draft) => promptDraft.save(draft),
-    { deep: true },
-);
+const props = defineProps<{
+    recentGenerations: Generation[];
+}>();
 
 const page = usePage();
-const activeOption = ref<"size" | "quality" | null>(null);
-const showReferenceUrls = ref(false);
-const sizeOptions = [
-    { value: "1024x1024", label: "Square", dimensions: "1024 × 1024" },
-    { value: "1024x1536", label: "Portrait", dimensions: "1024 × 1536" },
-    { value: "1536x1024", label: "Landscape", dimensions: "1536 × 1024" },
-] as const;
-const qualityOptions = [
-    { value: "standard", label: "Standard" },
-    { value: "high", label: "High" },
-] as const;
+const promptDraft = usePromptDraftStore();
+const form = useForm({
+    prompt: '',
+    size: '1024x1024',
+    quality: 'medium',
+    reference_image_urls: [''],
+});
+const estimateRequest = useHttp<
+    {
+        prompt: string;
+        size: string;
+        quality: string;
+        reference_image_urls: string[];
+    },
+    PriceEstimate
+>({
+    prompt: '',
+    size: '1024x1024',
+    quality: 'medium',
+    reference_image_urls: [],
+});
+const priceEstimate = ref<PriceEstimate | null>(null);
+const isEstimateUnavailable = ref(false);
+const activeOption = ref<PromptOption | null>(null);
+const selectedGenerationId = ref<number | null>(null);
+let estimateTimer: ReturnType<typeof setTimeout> | undefined;
+let estimateRevision = 0;
+
 const selectedSize = computed(
-    () => sizeOptions.find((option) => option.value === form.size) ?? sizeOptions[0],
+    () =>
+        sizeOptions.find((option) => option.value === form.size) ??
+        sizeOptions[0],
 );
 const selectedQuality = computed(
-    () => qualityOptions.find((option) => option.value === form.quality) ?? qualityOptions[0],
+    () =>
+        qualityOptions.find((option) => option.value === form.quality) ??
+        qualityOptions[0],
 );
+const isPromptEmpty = computed(() => form.prompt.trim().length === 0);
+const selectedGeneration = computed(
+    () =>
+        props.recentGenerations.find(
+            (generation) => generation.id === selectedGenerationId.value,
+        ) ?? null,
+);
+const perReferenceImageCost = computed(() =>
+    priceEstimate.value
+        ? formatUsd(priceEstimate.value.per_reference_image_user_cost_usd)
+        : null,
+);
+const isReferenceMenuOpen = computed({
+    get: () => activeOption.value === 'reference',
+    set: (open: boolean) => setOptionOpen('reference', open),
+});
+const isCostDetailsOpen = computed({
+    get: () => activeOption.value === 'cost',
+    set: (open: boolean) => setOptionOpen('cost', open),
+});
 
-function toggleOption(option: "size" | "quality"): void {
-    showReferenceUrls.value = false;
-    activeOption.value = activeOption.value === option ? null : option;
-}
+useGenerationPolling(() => props.recentGenerations, ['recentGenerations']);
 
-function toggleReferenceUrls(): void {
-    activeOption.value = null;
-    showReferenceUrls.value = !showReferenceUrls.value;
-
-    if (showReferenceUrls.value && form.reference_image_urls.length === 0) {
-        form.reference_image_urls.push("");
+function setOptionOpen(option: PromptOption, open: boolean): void {
+    if (open) {
+        activeOption.value = option;
+    } else if (activeOption.value === option) {
+        activeOption.value = null;
     }
 }
 
-function addReferenceUrl(): void {
-    form.reference_image_urls.push("");
+function toggleOption(option: PromptOption): void {
+    activeOption.value = activeOption.value === option ? null : option;
 }
 
-function removeReferenceUrl(index: number): void {
-    form.reference_image_urls.splice(index, 1);
+function closeOptionsOnOutsidePointer(event: PointerEvent): void {
+    if (
+        !(event.target instanceof Element) ||
+        !event.target.closest('[data-prompt-option]')
+    ) {
+        activeOption.value = null;
+    }
+}
+
+function filledReferenceUrls(): string[] {
+    return form.reference_image_urls
+        .map((url) => url.trim())
+        .filter((url) => url.length > 0);
+}
+
+function hasOnlyValidUrls(urls: string[]): boolean {
+    return urls.every((url) => {
+        try {
+            const parsedUrl = new URL(url);
+
+            return (
+                parsedUrl.protocol === 'http:' ||
+                parsedUrl.protocol === 'https:'
+            );
+        } catch {
+            return false;
+        }
+    });
+}
+
+function requestPriceEstimate(): void {
+    const revision = ++estimateRevision;
+
+    if (estimateTimer !== undefined) {
+        clearTimeout(estimateTimer);
+    }
+
+    estimateRequest.cancel();
+
+    const prompt = form.prompt.trim();
+    const referenceUrls = filledReferenceUrls();
+
+    if (
+        prompt.length > maximumPromptLength ||
+        referenceUrls.length > maximumReferenceImages ||
+        !hasOnlyValidUrls(referenceUrls)
+    ) {
+        return;
+    }
+
+    estimateTimer = setTimeout(() => {
+        estimateRequest.prompt = prompt;
+        estimateRequest.size = form.size;
+        estimateRequest.quality = form.quality;
+        estimateRequest.reference_image_urls = referenceUrls;
+        estimateRequest.post(estimatePromptRoute.url(), {
+            onSuccess: (response) => {
+                if (revision === estimateRevision) {
+                    priceEstimate.value = response;
+                    isEstimateUnavailable.value = false;
+                }
+            },
+            onHttpException: () => {
+                if (revision === estimateRevision) {
+                    isEstimateUnavailable.value = true;
+                }
+            },
+            onNetworkError: () => {
+                if (revision === estimateRevision) {
+                    isEstimateUnavailable.value = true;
+                }
+            },
+        });
+    }, estimateDebounceMilliseconds);
 }
 
 function submitPrompt(): void {
@@ -74,26 +186,48 @@ function submitPrompt(): void {
         return;
     }
 
-    const trimmedPrompt = form.prompt.trim();
-
-    if (trimmedPrompt.length === 0) {
+    if (isPromptEmpty.value) {
         return;
     }
 
-    form.prompt = trimmedPrompt;
-    form.reference_image_urls = form.reference_image_urls
-        .map((url) => url.trim())
-        .filter((url) => url.length > 0);
-
-    form.post(submitPromptRoute.url(), {
+    form.transform((data) => ({
+        ...data,
+        prompt: data.prompt.trim(),
+        reference_image_urls: filledReferenceUrls(),
+    })).post(storeGeneration.url(), {
         preserveScroll: true,
         onSuccess: () => {
-            submittedPrompt.value = trimmedPrompt;
             promptDraft.clear();
             form.reset();
+            activeOption.value = null;
         },
     });
 }
+
+onMounted(() => {
+    Object.assign(form, promptDraft.restore());
+    document.addEventListener('pointerdown', closeOptionsOnOutsidePointer);
+    requestPriceEstimate();
+});
+
+onUnmounted(() => {
+    document.removeEventListener('pointerdown', closeOptionsOnOutsidePointer);
+
+    if (estimateTimer !== undefined) {
+        clearTimeout(estimateTimer);
+    }
+
+    estimateRequest.cancel();
+});
+
+watch(
+    () => form.data(),
+    (draft) => {
+        promptDraft.save(draft);
+        requestPriceEstimate();
+    },
+    { deep: true },
+);
 </script>
 
 <template>
@@ -110,7 +244,7 @@ function submitPrompt(): void {
         >
             <h1
                 id="page-title"
-                class="mb-8 select-none text-[clamp(1.25rem,3vw,1.75rem)] font-medium leading-tight tracking-tight text-[#202124] dark:text-[#f8f9fa]"
+                class="mb-8 text-[clamp(1.25rem,3vw,1.75rem)] leading-tight font-medium tracking-tight text-[#202124] select-none dark:text-[#f8f9fa]"
             >
                 Generate images with Pixelforge
             </h1>
@@ -119,28 +253,28 @@ function submitPrompt(): void {
                 class="w-full max-w-[584px]"
                 novalidate
                 @submit.prevent="submitPrompt"
-                @keydown.esc="
-                    activeOption = null;
-                    showReferenceUrls = false;
-                "
+                @keydown.esc="activeOption = null"
             >
                 <label class="sr-only" for="prompt">Enter a prompt</label>
                 <div
-                    class="rounded-[28px] border border-[#d4d4d4] bg-white px-5 py-4 shadow-sm transition hover:shadow-md focus-within:shadow-md dark:border-[#5f6368] dark:bg-[#303134]"
+                    class="rounded-[28px] border border-[#d4d4d4] bg-white px-5 py-4 shadow-sm transition focus-within:shadow-md hover:shadow-md dark:border-[#5f6368] dark:bg-[#303134]"
                 >
                     <textarea
                         id="prompt"
                         v-model="form.prompt"
                         autofocus
-                        class="min-h-24 w-full resize-none bg-transparent text-base leading-6 text-[#202124] outline-none placeholder:text-[#70757a] dark:text-[#e8eaed] dark:placeholder:text-[#9aa0a6]"
+                        class="block min-h-24 w-full resize-none bg-transparent text-base leading-6 text-[#202124] outline-none placeholder:text-[#70757a] dark:text-[#e8eaed] dark:placeholder:text-[#9aa0a6]"
                         name="prompt"
                         placeholder="Ask Pixelforge"
+                        :maxlength="maximumPromptLength"
                         required
                         rows="3"
                     />
-                    <div class="mt-3 flex flex-wrap items-center justify-between gap-3 pt-3">
+                    <div
+                        class="mt-3 flex flex-wrap items-center justify-between gap-3 pt-3"
+                    >
                         <div class="flex flex-wrap items-center gap-2">
-                            <div class="relative">
+                            <div class="relative" data-prompt-option>
                                 <button
                                     id="size-option-trigger"
                                     class="flex min-h-9 items-center gap-2 rounded-full border border-[#dadce0] px-3 text-sm text-[#3c4043] transition hover:bg-[#f8f9fa] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5f6368] dark:border-[#5f6368] dark:text-[#e8eaed] dark:hover:bg-[#3c4043]"
@@ -176,7 +310,9 @@ function submitPrompt(): void {
                                         v-for="option in sizeOptions"
                                         :key="option.value"
                                         class="flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm transition hover:bg-[#f1f3f4] focus-visible:outline-2 focus-visible:outline-[#5f6368] dark:hover:bg-[#3c4043]"
-                                        :aria-pressed="form.size === option.value"
+                                        :aria-pressed="
+                                            form.size === option.value
+                                        "
                                         type="button"
                                         @click="
                                             form.size = option.value;
@@ -184,14 +320,15 @@ function submitPrompt(): void {
                                         "
                                     >
                                         <span>{{ option.label }}</span>
-                                        <span class="text-xs text-[#70757a] dark:text-[#9aa0a6]">{{
-                                            option.dimensions
-                                        }}</span>
+                                        <span
+                                            class="text-xs text-[#70757a] dark:text-[#9aa0a6]"
+                                            >{{ option.dimensions }}</span
+                                        >
                                     </button>
                                 </div>
                             </div>
 
-                            <div class="relative">
+                            <div class="relative" data-prompt-option>
                                 <button
                                     id="quality-option-trigger"
                                     class="flex min-h-9 items-center gap-2 rounded-full border border-[#dadce0] px-3 text-sm text-[#3c4043] transition hover:bg-[#f8f9fa] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5f6368] dark:border-[#5f6368] dark:text-[#e8eaed] dark:hover:bg-[#3c4043]"
@@ -227,7 +364,9 @@ function submitPrompt(): void {
                                         v-for="option in qualityOptions"
                                         :key="option.value"
                                         class="rounded-xl px-3 py-2 text-left text-sm transition hover:bg-[#f1f3f4] focus-visible:outline-2 focus-visible:outline-[#5f6368] dark:hover:bg-[#3c4043]"
-                                        :aria-pressed="form.quality === option.value"
+                                        :aria-pressed="
+                                            form.quality === option.value
+                                        "
                                         type="button"
                                         @click="
                                             form.quality = option.value;
@@ -239,162 +378,82 @@ function submitPrompt(): void {
                                 </div>
                             </div>
 
-                            <div class="relative">
-                                <div
-                                    v-if="showReferenceUrls"
-                                    id="reference-image-menu"
-                                    aria-labelledby="reference-option-trigger"
-                                    class="absolute bottom-full left-0 z-20 mb-2 grid max-h-[calc(100vh-8rem)] w-72 max-w-[calc(100vw-2rem)] gap-3 overflow-y-auto rounded-2xl border border-[#e0e0e0] bg-white p-4 shadow-lg dark:border-[#5f6368] dark:bg-[#303134]"
-                                    role="group"
-                                >
-                                    <div class="flex items-center justify-between gap-3">
-                                        <span class="text-sm font-medium"
-                                            >Reference image URLs</span
-                                        >
-                                        <span class="text-xs text-[#70757a] dark:text-[#9aa0a6]"
-                                            >Optional</span
-                                        >
-                                    </div>
-                                    <div
-                                        v-for="(url, index) in form.reference_image_urls"
-                                        :key="index"
-                                        class="grid grid-cols-[1fr_auto] items-start gap-2"
-                                    >
-                                        <div class="grid gap-1">
-                                            <label
-                                                class="sr-only"
-                                                :for="`reference-image-url-${index}`"
-                                            >
-                                                Reference image URL {{ index + 1 }}
-                                            </label>
-                                            <input
-                                                :id="`reference-image-url-${index}`"
-                                                v-model="form.reference_image_urls[index]"
-                                                class="h-10 min-w-0 rounded-lg border border-[#d4d4d4] bg-white px-3 text-sm outline-none transition placeholder:text-[#70757a] focus-visible:border-[#5f6368] focus-visible:ring-2 focus-visible:ring-[#5f6368]/20 dark:border-[#5f6368] dark:bg-[#202124] dark:text-[#e8eaed] dark:placeholder:text-[#9aa0a6]"
-                                                name="reference_image_urls[]"
-                                                placeholder="https://example.com/image.jpg"
-                                                type="url"
-                                            />
-                                            <p
-                                                v-if="form.errors[`reference_image_urls.${index}`]"
-                                                class="text-sm text-destructive"
-                                                role="alert"
-                                            >
-                                                {{ form.errors[`reference_image_urls.${index}`] }}
-                                            </p>
-                                        </div>
-                                        <button
-                                            class="flex size-10 items-center justify-center rounded-lg text-[#5f6368] transition hover:bg-[#f1f3f4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5f6368] dark:text-[#bdc1c6] dark:hover:bg-[#3c4043]"
-                                            :aria-label="`Remove reference image URL ${index + 1}`"
-                                            type="button"
-                                            @click="removeReferenceUrl(index)"
-                                        >
-                                            <span aria-hidden="true" class="text-xl">×</span>
-                                        </button>
-                                    </div>
-                                    <button
-                                        class="w-fit rounded-lg px-2 py-1 text-sm font-medium text-[#202124] transition hover:bg-[#f1f3f4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5f6368] dark:text-[#e8eaed] dark:hover:bg-[#3c4043]"
-                                        type="button"
-                                        @click="addReferenceUrl"
-                                    >
-                                        Add URL
-                                    </button>
-                                    <p
-                                        v-if="form.errors.reference_image_urls"
-                                        class="text-sm text-destructive"
-                                        role="alert"
-                                    >
-                                        {{ form.errors.reference_image_urls }}
-                                    </p>
-                                </div>
-                                <button
-                                    id="reference-option-trigger"
-                                    class="flex min-h-9 items-center gap-2 rounded-full border border-[#dadce0] px-3 text-sm text-[#3c4043] transition hover:bg-[#f8f9fa] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5f6368] dark:border-[#5f6368] dark:text-[#e8eaed] dark:hover:bg-[#3c4043]"
-                                    type="button"
-                                    aria-controls="reference-image-menu"
-                                    :aria-expanded="showReferenceUrls"
-                                    @click="toggleReferenceUrls"
-                                >
-                                    <svg
-                                        aria-hidden="true"
-                                        class="size-4"
-                                        fill="none"
-                                        viewBox="0 0 20 20"
-                                    >
-                                        <rect
-                                            x="2.5"
-                                            y="3.5"
-                                            width="15"
-                                            height="13"
-                                            rx="2"
-                                            stroke="currentColor"
-                                            stroke-width="1.5"
-                                        />
-                                        <circle
-                                            cx="7"
-                                            cy="8"
-                                            r="1.5"
-                                            stroke="currentColor"
-                                            stroke-width="1.5"
-                                        />
-                                        <path
-                                            d="m4 15 4.5-4 2.5 2 2.5-2 2.5 2"
-                                            stroke="currentColor"
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="1.5"
-                                        />
-                                    </svg>
-                                    Reference
-                                </button>
-                            </div>
+                            <ReferenceImagesPopover
+                                v-model:urls="form.reference_image_urls"
+                                v-model:open="isReferenceMenuOpen"
+                                :per-reference-image-cost="
+                                    perReferenceImageCost
+                                "
+                                :server-errors="form.errors"
+                            />
                         </div>
 
-                        <button
-                            class="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#202124] text-white transition hover:bg-[#3c4043] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5f6368] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#e8eaed] dark:text-[#202124] dark:hover:bg-white"
-                            :disabled="form.processing || form.prompt.trim().length === 0"
-                            type="submit"
-                            aria-label="Submit prompt"
-                            title="Submit prompt"
-                        >
-                            <svg aria-hidden="true" class="size-5" fill="none" viewBox="0 0 24 24">
-                                <path
-                                    d="M5 12h14M13 6l6 6-6 6"
-                                    stroke="currentColor"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                />
-                            </svg>
-                        </button>
+                        <div class="flex items-center gap-1">
+                            <CostEstimatePopover
+                                v-model:open="isCostDetailsOpen"
+                                :estimate="priceEstimate"
+                                :is-unavailable="isEstimateUnavailable"
+                                :is-calculating="estimateRequest.processing"
+                            />
+                            <button
+                                class="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#202124] text-white transition hover:bg-[#3c4043] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5f6368] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#e8eaed] dark:text-[#202124] dark:hover:bg-white"
+                                :disabled="form.processing || isPromptEmpty"
+                                type="submit"
+                                aria-label="Submit prompt"
+                                title="Submit prompt"
+                            >
+                                <svg
+                                    aria-hidden="true"
+                                    class="size-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        d="M5 12h14M13 6l6 6-6 6"
+                                        stroke="currentColor"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                    />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
-                </div>
-                <p v-if="form.errors.prompt" class="mt-2 text-sm text-destructive" role="alert">
-                    {{ form.errors.prompt }}
-                </p>
-                <div
-                    v-if="form.errors.size || form.errors.quality"
-                    class="mt-2 grid gap-1"
-                    role="alert"
-                >
-                    <p v-if="form.errors.size" class="text-sm text-destructive">
-                        {{ form.errors.size }}
-                    </p>
-                    <p v-if="form.errors.quality" class="text-sm text-destructive">
-                        {{ form.errors.quality }}
-                    </p>
                 </div>
             </form>
 
-            <p
-                v-if="submittedPrompt"
-                aria-live="polite"
-                class="mt-6 max-w-[584px] text-center text-sm text-[#5f6368] dark:text-[#bdc1c6]"
-            >
-                Prompt ready: {{ submittedPrompt }}
-            </p>
+            <div class="w-full max-w-[584px] px-5" aria-live="polite">
+                <p
+                    v-for="error in [
+                        form.errors.prompt,
+                        form.errors.size,
+                        form.errors.quality,
+                    ].filter(Boolean)"
+                    :key="error"
+                    class="mt-2 text-sm leading-5 text-destructive-foreground"
+                    role="alert"
+                >
+                    {{ error }}
+                </p>
+            </div>
+
+            <RecentGenerations
+                v-if="page.props.auth.user && recentGenerations.length"
+                class="mt-10"
+                :generations="recentGenerations"
+                @open="(generation) => (selectedGenerationId = generation.id)"
+            />
         </section>
 
         <AppFooter />
+
+        <GenerationDetailsDialog
+            :generation="selectedGeneration"
+            @close="selectedGenerationId = null"
+            @retried="
+                (retriedGenerationId) =>
+                    (selectedGenerationId = retriedGenerationId)
+            "
+        />
     </main>
 </template>

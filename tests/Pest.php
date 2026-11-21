@@ -44,7 +44,80 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+function pixelforgePricingResponse(): array
 {
-    // ..
+    return [
+        'object' => 'pricing',
+        'currency' => 'usd',
+        'unit' => 'per_1m_tokens',
+        'rates' => [
+            'input_text_tokens' => '5.00',
+            'input_image_tokens' => '10.00',
+            'output_tokens' => '40.00',
+            'reasoning_tokens' => '12.50',
+        ],
+        'tokens' => [
+            'characters_per_text_token' => 4,
+            'text_token_variance' => 0.15,
+            'per_reference_image' => 765,
+            'output' => [
+                'low' => ['1024x1024' => 280, '1024x1536' => 420, '1536x1024' => 420],
+                'medium' => ['1024x1024' => 1100, '1024x1536' => 1650, '1536x1024' => 1650],
+                'high' => ['1024x1024' => 4300, '1024x1536' => 6450, '1536x1024' => 6450],
+            ],
+            'reasoning' => [
+                'low' => ['min' => 0, 'max' => 500],
+                'medium' => ['min' => 200, 'max' => 2000],
+                'high' => ['min' => 1000, 'max' => 8000],
+            ],
+        ],
+    ];
+}
+
+/**
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function pixelforgeGeneration(array $overrides = []): array
+{
+    return [
+        'id' => 'gen_01JC2Z8Q4N6V0M3H7X5T9R2B1K',
+        'object' => 'generation',
+        'status' => 'queued',
+        'prompt' => 'A lighthouse on a cliff at dawn',
+        'size' => '1024x1024',
+        'quality' => 'medium',
+        'reference_images' => [],
+        'metadata' => [],
+        'image_url' => null,
+        'image_url_expires_at' => null,
+        'usage' => null,
+        'rates' => pixelforgePricingResponse()['rates'],
+        'error' => null,
+        'created_at' => '2026-11-21T10:00:00Z',
+        'started_at' => null,
+        'completed_at' => null,
+        ...$overrides,
+    ];
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function succeededPixelforgeGeneration(): array
+{
+    return pixelforgeGeneration([
+        'status' => 'succeeded',
+        'image_url' => 'https://pixelforge.promptedit.dev/images/gen_01JC2Z8Q4N6V0M3H7X5T9R2B1K.png?signature=abc',
+        'image_url_expires_at' => '2026-11-22T10:00:20Z',
+        'usage' => [
+            'input_text_tokens' => 9,
+            'input_image_tokens' => 0,
+            'output_tokens' => 1100,
+            'reasoning_tokens' => 842,
+            'total_tokens' => 1951,
+        ],
+        'started_at' => '2026-11-21T10:00:02Z',
+        'completed_at' => '2026-11-21T10:00:20Z',
+    ]);
 }

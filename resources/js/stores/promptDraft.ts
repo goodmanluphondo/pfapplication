@@ -13,7 +13,7 @@ function emptyDraft(): PromptDraft {
     return {
         prompt: '',
         size: '1024x1024',
-        quality: 'standard',
+        quality: 'medium',
         reference_image_urls: [''],
     };
 }
@@ -43,13 +43,13 @@ function readDraft(): PromptDraft {
             size: ['1024x1024', '1024x1536', '1536x1024'].includes(draft.size ?? '')
                 ? draft.size!
                 : '1024x1024',
-            quality: ['standard', 'high'].includes(draft.quality ?? '')
+            quality: ['low', 'medium', 'high'].includes(draft.quality ?? '')
                 ? draft.quality!
-                : 'standard',
+                : 'medium',
             reference_image_urls: Array.isArray(draft.reference_image_urls)
                 ? draft.reference_image_urls.filter(
                       (url): url is string => typeof url === 'string',
-                  )
+                  ).slice(0, 4)
                 : [''],
         };
     } catch {
@@ -85,7 +85,7 @@ export const usePromptDraftStore = defineStore('promptDraft', {
                     this.draft.prompt.length === 0 &&
                     this.draft.reference_image_urls.every((url) => url.length === 0) &&
                     this.draft.size === '1024x1024' &&
-                    this.draft.quality === 'standard'
+                    this.draft.quality === 'medium'
                 ) {
                     window.sessionStorage.removeItem(storageKey);
 

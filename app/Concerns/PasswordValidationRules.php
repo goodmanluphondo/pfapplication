@@ -18,6 +18,16 @@ trait PasswordValidationRules
     }
 
     /**
+     * Get the validation rules used to validate a new password entered once, without a confirmation field.
+     *
+     * @return array<int, Password|ValidationRule|array<mixed>|string>
+     */
+    protected function unconfirmedPasswordRules(): array
+    {
+        return ['required', 'string', Password::default()];
+    }
+
+    /**
      * Get the validation rules used to validate the current password.
      *
      * @return array<int, Password|ValidationRule|array<mixed>|string>

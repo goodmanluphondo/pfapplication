@@ -16,6 +16,7 @@ type Props = {
     label?: string;
     loadingLabel?: string;
     separator?: string;
+    separatorPlacement?: 'before' | 'after';
 };
 
 const props = defineProps<Props>();
@@ -30,13 +31,22 @@ const { verify, isLoading, error, isSupported } = usePasskeyVerify({
           }
         : {}),
     onSuccess: (response) => {
-            router.visit(response.redirect ?? '/');
+        router.visit(response.redirect ?? '/');
     },
 });
 </script>
 
 <template>
     <div v-if="isSupported">
+        <div
+            v-if="props.separatorPlacement === 'before'"
+            class="mb-4 flex items-center gap-3 text-xs leading-4 text-[#70757a] dark:text-[#9aa0a6]"
+        >
+            <span class="h-px flex-1 bg-[#dadce0] dark:bg-[#5f6368]" />
+            {{ props.separator ?? 'or' }}
+            <span class="h-px flex-1 bg-[#dadce0] dark:bg-[#5f6368]" />
+        </div>
+
         <div class="grid gap-2">
             <Button
                 type="button"
@@ -59,7 +69,7 @@ const { verify, isLoading, error, isSupported } = usePasskeyVerify({
             </div>
         </div>
 
-        <div class="relative my-6">
+        <div v-if="props.separatorPlacement !== 'before'" class="relative my-6">
             <div class="absolute inset-0 flex items-center">
                 <Separator class="w-full" />
             </div>

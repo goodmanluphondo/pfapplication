@@ -15,6 +15,9 @@ export default defineConfig({
                 bunny('Inter', {
                     weights: [400, 500, 600],
                 }),
+                bunny('Quicksand', {
+                    weights: [700],
+                }),
             ],
         }),
         inertia(),

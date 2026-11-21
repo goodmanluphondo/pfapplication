@@ -1,27 +1,29 @@
 <script setup lang="ts">
-import { Link, usePage } from "@inertiajs/vue3";
-import { ChevronDown, Moon, Sun, User as UserIcon } from "@lucide/vue";
-import { computed } from "vue";
-import { home, login, register } from "@/routes";
-import { useAppearance } from "@/composables/useAppearance";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Link, usePage } from '@inertiajs/vue3';
+import { ChevronDown, Moon, Sun, User as UserIcon } from '@lucide/vue';
+import { computed } from 'vue';
+import { home, login, register } from '@/routes';
+import { index as history } from '@/routes/generations';
+import AppLogoLockup from '@/components/AppLogoLockup.vue';
+import { useAppearance } from '@/composables/useAppearance';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import UserMenuContent from "@/components/UserMenuContent.vue";
+} from '@/components/ui/dropdown-menu';
+import UserMenuContent from '@/components/UserMenuContent.vue';
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
 const { resolvedAppearance, updateAppearance } = useAppearance();
-const isDarkMode = computed(() => resolvedAppearance.value === "dark");
+const isDarkMode = computed(() => resolvedAppearance.value === 'dark');
 const userName = computed(() =>
-    [user.value?.first_name, user.value?.last_name].filter(Boolean).join(" "),
+    [user.value?.first_name, user.value?.last_name].filter(Boolean).join(' '),
 );
 
 function toggleAppearance(): void {
-    updateAppearance(isDarkMode.value ? "light" : "dark");
+    updateAppearance(isDarkMode.value ? 'light' : 'dark');
 }
 </script>
 
@@ -32,14 +34,24 @@ function toggleAppearance(): void {
         <Link
             :href="home()"
             :aria-label="`${page.props.name} home`"
-            class="text-lg font-semibold tracking-tight text-[#202124] dark:text-[#f8f9fa]"
+            class="rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#5f6368]"
         >
-            {{ page.props.name }}
+            <AppLogoLockup />
         </Link>
 
         <div class="flex items-center gap-3">
+            <Link
+                v-if="user"
+                :href="history()"
+                class="px-2 text-[#202124] hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-[#5f6368] dark:text-[#e8eaed]"
+            >
+                History
+            </Link>
+
             <button
-                :aria-label="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
+                :aria-label="
+                    isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'
+                "
                 :aria-pressed="isDarkMode"
                 class="flex size-10 items-center justify-center rounded-full text-[#5f6368] transition hover:bg-[#f1f3f4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5f6368] dark:text-[#bdc1c6] dark:hover:bg-[#3c4043]"
                 type="button"
@@ -56,15 +68,24 @@ function toggleAppearance(): void {
                         class="flex h-10 w-16 items-center justify-center gap-1 rounded-full bg-[#f1f3f4] p-1 text-[#5f6368] transition hover:bg-[#f1f3f4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5f6368] dark:bg-[#3c4043] dark:text-[#e8eaed] dark:hover:bg-[#3c4043]"
                         type="button"
                     >
-                        <Avatar class="size-8 shrink-0 overflow-hidden rounded-full">
-                            <AvatarImage v-if="user.avatar" :src="user.avatar" :alt="userName" />
+                        <Avatar
+                            class="size-8 shrink-0 overflow-hidden rounded-full"
+                        >
+                            <AvatarImage
+                                v-if="user.avatar"
+                                :src="user.avatar"
+                                :alt="userName"
+                            />
                             <AvatarFallback
                                 class="rounded-full bg-[#e8eaed] text-xs font-semibold text-[#202124] dark:bg-[#5f6368] dark:text-[#f8f9fa]"
                             >
                                 <UserIcon aria-hidden="true" class="size-4" />
                             </AvatarFallback>
                         </Avatar>
-                        <ChevronDown aria-hidden="true" class="size-4 shrink-0" />
+                        <ChevronDown
+                            aria-hidden="true"
+                            class="size-4 shrink-0"
+                        />
                     </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
